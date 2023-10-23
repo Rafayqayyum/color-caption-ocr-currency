@@ -3,6 +3,7 @@ import cv2
 from pytesseract import Output
 import numpy as np
 import imutils
+import logging
 
 # set tesseract path
 pytesseract.pytesseract.tesseract_cmd = r'C:\Users\rafay\AppData\Local\Programs\Tesseract-OCR\tesseract.exe'
@@ -11,13 +12,14 @@ pytesseract.pytesseract.tesseract_cmd = r'C:\Users\rafay\AppData\Local\Programs\
 # img = image loaded using BytesIO
 # returns text
 def ocr(img):
+    logger = logging.getLogger(__name__)
     # convert image to numpy array
     img = np.array(img)
     try:
         results = pytesseract.image_to_osd(img, output_type=Output.DICT)
         rotated = imutils.rotate_bound(img, angle=results["rotate"])
     except pytesseract.TesseractError as e:
-        print(e)
+        logger.error(e)
         rotated=img
     # convert image to grayscale
     img = cv2.cvtColor(rotated, cv2.COLOR_RGB2GRAY)
@@ -28,10 +30,8 @@ def ocr(img):
     # get text from image
     text=pytesseract.image_to_string(img,lang='eng')
     # clean text
-    print(text)
     clean_text = text.strip()
     clean_text= ' '.join(clean_text.split())
-    print(clean_text)
     # return text
     return clean_text
 

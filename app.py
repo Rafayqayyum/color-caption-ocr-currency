@@ -8,6 +8,7 @@ import cv2
 import numpy as np
 from utils.pk_currency import currency
 from utils.color import detect_colors, get_dominant_color
+import logging
 
 app = FastAPI()
 
@@ -21,8 +22,6 @@ app.add_middleware(
     allow_methods=["*"], # allow all methods
     allow_headers=["*"], # allow all headers
 )
-
-
 
 # Read an image
 def read_imagefile(file) -> Image.Image:
@@ -94,5 +93,17 @@ async def color_api(image: UploadFile=File(...)):
 
 
 if __name__ == "__main__":
+    # Logger
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.DEBUG)
+    fh = logging.FileHandler("app.log")
+    fh.setLevel(logging.DEBUG)
+    # Formatter
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    # set formatter to fh
+    fh.setFormatter(formatter)
+    # add file handler to logger
+    logger.addHandler(fh)
+    # run uvicorn server
     uvicorn.run(app, host="0.0.0.0", port=8000)
 
