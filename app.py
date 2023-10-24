@@ -1,16 +1,19 @@
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, UploadFile, status, Response
 import uvicorn
 from utils.ocr import ocr
 from utils.caption import get_caption
 from io import BytesIO
 from PIL import Image
-import cv2
 import numpy as np
 from utils.pk_currency import currency
 from utils.color import detect_colors, get_dominant_color
 import logging
 
 app = FastAPI()
+MESSAGE = "message"
+NO_IMAGE_FOUND = "No image found"
+IMAGE_FORMAT_NOT_SUPPORTED = "Image format not supported"
+SUPPORTED_FORMATS = ["jpg", "jpeg", "jfif", "png"]
 
 # set CORS policy, so that the frontend can access the API
 # https://fastapi.tiangolo.com/tutorial/cors/
@@ -31,56 +34,67 @@ def read_imagefile(file) -> Image.Image:
     return image
 
 @app.post('/captionapi')
-async def caption_api(image: UploadFile=File(...)):
+async def caption_api(image: UploadFile=File(...), response: Response = None):
     #CHECK IF IMAGE IS UPLOADED
     if not image.filename or image.filename == "":
         #return status code and message
-        return {"status_code": 400, "message": "No image found"}
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return { MESSAGE: NO_IMAGE_FOUND}
     #CHECK IF IMAGE IS IN SUPPORTED FORMAT
-    ext=image.filename.split(".")[1] in ("jpg", "jpeg","jfif")
+    ext=image.filename.split(".")[1] in SUPPORTED_FORMATS
     if not ext:
-        return {"status_code": 400, "message": "Image format not supported"}
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return {MESSAGE: IMAGE_FORMAT_NOT_SUPPORTED}
     file=await image.read()
-    image=BytesIO(file) # type: ignore
-    return {"status_code": 200, "message": get_caption(image)}
+    image=BytesIO(file) 
+    response.status_code = status.HTTP_200_OK
+    return {MESSAGE: get_caption(image)}
 
 
 @app.post('/ocrapi')
-async def ocr_api(image: UploadFile=File(...)):
+async def ocr_api(image: UploadFile=File(...), response: Response = None):
     #CHECK IF IMAGE IS UPLOADED
     if not image.filename or image.filename == "":
         #return status code and message
-        return {"status_code": 400, "message": "No image found"}
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return {MESSAGE: NO_IMAGE_FOUND}
     #CHECK IF IMAGE IS IN SUPPORTED FORMAT
-    ext=image.filename.split(".")[1] in ("jpg", "jpeg","jfif")
+    ext=image.filename.split(".")[1] in SUPPORTED_FORMATS
     if not ext:
-        return {"status_code": 400, "message": "Image format not supported"}
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return {MESSAGE: IMAGE_FORMAT_NOT_SUPPORTED}
     img=read_imagefile(await image.read())
-    return {"status_code": 200, "message": ocr(img)}
+    response.status_code = status.HTTP_200_OK
+    return {MESSAGE: ocr(img)}
 
 @app.post('/currencyapi')
-async def currency_api(image: UploadFile=File(...)):
+async def currency_api(image: UploadFile=File(...), response: Response = None):
     #CHECK IF IMAGE IS UPLOADED
     if not image.filename or image.filename == "":
         #return status code and message
-        return {"status_code": 400, "message": "No image found"}
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return { MESSAGE: NO_IMAGE_FOUND}
     #CHECK IF IMAGE IS IN SUPPORTED FORMAT
-    ext=image.filename.split(".")[1] in ("jpg", "jpeg","jfif")
+    ext=image.filename.split(".")[1] in SUPPORTED_FORMATS
     if not ext:
-        return {"status_code": 400, "message": "Image format not supported"}
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return {MESSAGE: IMAGE_FORMAT_NOT_SUPPORTED}
     img=read_imagefile(await image.read())
-    return {"status_code": 200, "message": currency(img)}
+    response.status_code = status.HTTP_200_OK
+    return {MESSAGE: currency(img)}
     
 @app.post('/colorapi')
-async def color_api(image: UploadFile=File(...)):
+async def color_api(image: UploadFile=File(...), response: Response = None):
     #CHECK IF IMAGE IS UPLOADED
     if not image.filename or image.filename == "":
         #return status code and message
-        return {"status_code": 400, "message": "No image found"}
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return {MESSAGE: NO_IMAGE_FOUND}
     #CHECK IF IMAGE IS IN SUPPORTED FORMAT
-    ext=image.filename.split(".")[1] in ("jpg", "jpeg","jfif")
+    ext=image.filename.split(".")[1] in SUPPORTED_FORMATS
     if not ext:
-        return {"status_code": 400, "message": "Image format not supported"}
+        response.status_code = response.status_code
+        return {MESSAGE: IMAGE_FORMAT_NOT_SUPPORTED}
     img=read_imagefile(await image.read())
     colors=detect_colors(img)
     # get the top 3 non zero percentage colors from colors dictionary
@@ -89,7 +103,8 @@ async def color_api(image: UploadFile=File(...)):
     colors = [color[0] for color in colors if color[1] != 0]
     # make a color string
     colors = ", ".join(colors)
-    return {"status_code": 200, "message": colors}
+    response.status_code = status.HTTP_200_OK
+    return {MESSAGE: colors}
 
 
 if __name__ == "__main__":
